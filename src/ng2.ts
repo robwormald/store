@@ -4,7 +4,7 @@ import { Reducer } from './reducer';
 import { Dispatcher } from './dispatcher';
 import { Store } from './store';
 import { State } from './state';
-import { combineReducers } from './utils';
+import { combineReducers, compose } from './utils';
 
 
 export const INITIAL_REDUCER = new OpaqueToken('ngrx/store/reducer');
@@ -38,10 +38,42 @@ const reducerProvider = provide(Reducer, {
   }
 });
 
+const storeProviderWithMiddleware = (middlewares?:any) => provide(Store, {
+  deps: [Dispatcher, Reducer, State, INITIAL_STATE],
+  useFactory(dispatcher: Dispatcher, reducer: Reducer, state$: State<any>, initialState: any) {
+
+    
+    let store = new Store<any>(dispatcher, reducer, state$, initialState);
+
+    var middlewareAPI = {
+      getState: () => {
+        let state;
+        store.subscribe(s => {
+          state = s;
+        }).unsubscribe();
+        return state;
+      },
+      dispatch: (action) => {
+        dispatcher.next(action);
+      }
+    }
+    let chain = middlewares.map(middleware => middleware(middlewareAPI))
+    let dispatch = compose(...chain)((action) => dispatcher.dispatch(action));
+
+    store.dispatch = (action) => dispatch(action);
+    store.next = (action) => dispatch(action);
+
+    return store;
+
+  }
+});
 
 
-export function provideStore(reducer: any, initialState?: any) {
-  return [
+
+
+
+export function provideStore(reducer: any, initialState?: any, middlewares?:any) {
+  let providers = [
     provide(INITIAL_REDUCER, {
       useFactory() {
         if (typeof reducer === 'function') {
@@ -62,8 +94,16 @@ export function provideStore(reducer: any, initialState?: any) {
       }
     }),
     dispatcherProvider,
-    storeProvider,
     stateProvider,
     reducerProvider
   ];
+
+  if(middlewares){
+    providers.push(storeProviderWithMiddleware(middlewares))
+  }
+  else {
+    providers.push(storeProvider);
+  }
+
+  return providers;
 }

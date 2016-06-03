@@ -17,6 +17,10 @@ export class Dispatcher extends SyncSubject<Action> {
     this.next(action);
   }
 
+  next(action:Action){
+    super.next(action);
+  }
+
   complete() {
     // noop
   }

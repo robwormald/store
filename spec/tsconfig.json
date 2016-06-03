@@ -13,6 +13,7 @@
     "integration_spec.ts",
 		"store_spec.ts",
 		"state_spec.ts",
-    "edge_spec.ts"
+    "edge_spec.ts",
+		"middleware_spec.ts"
 	]
 }
